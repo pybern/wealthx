@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+:root {
+  --background: #070c14;
+  --surface: #0d1522;
+  --surface-2: #111c2e;
+  --border: #1c2a40;
+  --foreground: #e7edf6;
+  --muted: #8b9bb4;
+  --accent: #34d399;
+  --accent-dim: #10b981;
+  --negative: #f87171;
+  --gold: #eab308;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-edge: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-negative: var(--negative);
+  --color-gold: var(--gold);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+::selection {
+  background: rgba(52, 211, 153, 0.25);
+}
+
+/* Minimal markdown rendering for AI output */
+.ai-prose {
+  line-height: 1.65;
+  font-size: 0.875rem;
+}
+.ai-prose h1,
+.ai-prose h2,
+.ai-prose h3 {
+  color: var(--foreground);
+  font-weight: 600;
+  margin: 1em 0 0.4em;
+}
+.ai-prose h1 { font-size: 1.05rem; }
+.ai-prose h2 { font-size: 1rem; }
+.ai-prose h3 { font-size: 0.925rem; }
+.ai-prose p { margin: 0.5em 0; }
+.ai-prose ul,
+.ai-prose ol {
+  margin: 0.5em 0;
+  padding-left: 1.25em;
+}
+.ai-prose ul { list-style: disc; }
+.ai-prose ol { list-style: decimal; }
+.ai-prose li { margin: 0.25em 0; }
+.ai-prose strong { color: var(--foreground); font-weight: 600; }
+.ai-prose code {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.8em;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+.ai-prose hr {
+  border-color: var(--border);
+  margin: 1em 0;
+}

@@ -1,0 +1,115 @@
+import "server-only";
+
+/**
+ * Open Code Zen — OpenAI-compatible LLM gateway.
+ * https://opencode.ai/docs/zen/
+ *
+ * Configure via environment variables (see .env.example):
+ *   OPENCODE_ZEN_API_KEY   – API key from opencode.ai/auth
+ *   OPENCODE_ZEN_MODEL     – model id (default: a free Zen model)
+ *   OPENCODE_ZEN_BASE_URL  – override the gateway URL if needed
+ */
+
+const DEFAULT_BASE_URL = "https://opencode.ai/zen/v1";
+const DEFAULT_MODEL = "big-pickle";
+
+export interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+export function getZenConfig(): {
+  apiKey: string | undefined;
+  baseUrl: string;
+  model: string;
+} {
+  return {
+    apiKey:
+      process.env.OPENCODE_ZEN_API_KEY ?? process.env.OPENCODE_API_KEY,
+    baseUrl: process.env.OPENCODE_ZEN_BASE_URL ?? DEFAULT_BASE_URL,
+    model: process.env.OPENCODE_ZEN_MODEL ?? DEFAULT_MODEL,
+  };
+}
+
+export function isZenConfigured(): boolean {
+  return Boolean(getZenConfig().apiKey);
+}
+
+export class ZenNotConfiguredError extends Error {
+  constructor() {
+    super(
+      "Open Code Zen is not configured. Set OPENCODE_ZEN_API_KEY in .env.local (get a key at opencode.ai/auth).",
+    );
+    this.name = "ZenNotConfiguredError";
+  }
+}
+
+/**
+ * Stream a chat completion from Open Code Zen. Returns a stream of plain
+ * text chunks (SSE deltas already parsed).
+ */
+export async function streamChat(
+  messages: ChatMessage[],
+  options?: { temperature?: number; maxTokens?: number },
+): Promise<ReadableStream<Uint8Array>> {
+  const { apiKey, baseUrl, model } = getZenConfig();
+  if (!apiKey) throw new ZenNotConfiguredError();
+
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      stream: true,
+      temperature: options?.temperature ?? 0.4,
+      max_tokens: options?.maxTokens ?? 2048,
+    }),
+  });
+
+  if (!response.ok || !response.body) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(
+      `Open Code Zen request failed (HTTP ${response.status}): ${detail.slice(0, 500)}`,
+    );
+  }
+
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  const reader = response.body.getReader();
+  let buffer = "";
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const { done, value } = await reader.read();
+      if (done) {
+        controller.close();
+        return;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data:")) continue;
+        const payload = trimmed.slice(5).trim();
+        if (payload === "[DONE]") continue;
+        try {
+          const json = JSON.parse(payload) as {
+            choices?: { delta?: { content?: string } }[];
+          };
+          const content = json.choices?.[0]?.delta?.content;
+          if (content) controller.enqueue(encoder.encode(content));
+        } catch {
+          // Ignore malformed keep-alive lines
+        }
+      }
+    },
+    cancel(reason) {
+      void reader.cancel(reason);
+    },
+  });
+}

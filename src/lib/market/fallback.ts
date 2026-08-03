@@ -1,0 +1,63 @@
+/**
+ * Last-known baseline prices, used only when a live data source is
+ * unreachable so the app always renders. Refreshed at build time of the
+ * dataset — values come from real market data.
+ */
+export const FALLBACK_QUOTES: Record<
+  string,
+  { price: number; prevClose: number; name: string }
+> = {
+  AAPL: { price: 308.91, prevClose: 333.02, name: "Apple Inc." },
+  MSFT: { price: 464.72, prevClose: 381.7, name: "Microsoft Corporation" },
+  NVDA: { price: 200.75, prevClose: 206.84, name: "NVIDIA Corporation" },
+  AMZN: { price: 271.58, prevClose: 232.11, name: "Amazon.com, Inc." },
+  GOOGL: { price: 356.13, prevClose: 319.74, name: "Alphabet Inc." },
+  JPM: { price: 351.79, prevClose: 353.21, name: "JPMorgan Chase & Co." },
+  JNJ: { price: 256.35, prevClose: 263.4, name: "Johnson & Johnson" },
+  XOM: { price: 155.44, prevClose: 156.94, name: "Exxon Mobil Corporation" },
+  "BRK-B": { price: 511.54, prevClose: 494.93, name: "Berkshire Hathaway Inc." },
+  TSLA: { price: 311.21, prevClose: 313.03, name: "Tesla, Inc." },
+  COST: { price: 951.89, prevClose: 935.03, name: "Costco Wholesale Corporation" },
+  UNH: { price: 414.4, prevClose: 420.74, name: "UnitedHealth Group Incorporated" },
+  V: { price: 366.13, prevClose: 355.74, name: "Visa Inc." },
+  PG: { price: 144.49, prevClose: 147.41, name: "The Procter & Gamble Company" },
+  HD: { price: 331.96, prevClose: 332.98, name: "The Home Depot, Inc." },
+  VOO: { price: 686.65, prevClose: 679.14, name: "Vanguard S&P 500 ETF" },
+  VTI: { price: 368.21, prevClose: 364.8, name: "Vanguard Total Stock Market ETF" },
+  QQQ: { price: 687.99, prevClose: 684.23, name: "Invesco QQQ Trust" },
+  SCHD: { price: 33.47, prevClose: 33.29, name: "Schwab U.S. Dividend Equity ETF" },
+  VXUS: { price: 84.59, prevClose: 83.4, name: "Vanguard Total International Stock ETF" },
+  VEA: { price: 70.62, prevClose: 69.71, name: "Vanguard FTSE Developed Markets ETF" },
+  VWO: { price: 58.75, prevClose: 57.8, name: "Vanguard FTSE Emerging Markets ETF" },
+  AGG: { price: 97.37, prevClose: 97.46, name: "iShares Core U.S. Aggregate Bond ETF" },
+  BND: { price: 72.23, prevClose: 72.31, name: "Vanguard Total Bond Market ETF" },
+  TLT: { price: 82.25, prevClose: 83.25, name: "iShares 20+ Year Treasury Bond ETF" },
+  MUB: { price: 105.64, prevClose: 105.55, name: "iShares National Muni Bond ETF" },
+  LQD: { price: 106.25, prevClose: 106.23, name: "iShares iBoxx $ IG Corporate Bond ETF" },
+  TIP: { price: 107.63, prevClose: 107.5, name: "iShares TIPS Bond ETF" },
+  SHY: { price: 82.0, prevClose: 81.85, name: "iShares 1-3 Year Treasury Bond ETF" },
+  GLD: { price: 371.54, prevClose: 371.9, name: "SPDR Gold Shares" },
+  VNQ: { price: 98.95, prevClose: 100.81, name: "Vanguard Real Estate ETF" },
+  IWM: { price: 291.2, prevClose: 291.17, name: "iShares Russell 2000 ETF" },
+  ARKK: { price: 71.24, prevClose: 71.89, name: "ARK Innovation ETF" },
+  VIG: { price: 239.17, prevClose: 238.65, name: "Vanguard Dividend Appreciation ETF" },
+  BTC: { price: 62743, prevClose: 63400, name: "Bitcoin" },
+  ETH: { price: 1856.58, prevClose: 1875.2, name: "Ethereum" },
+  "^GSPC": { price: 7489.72, prevClose: 7411.98, name: "S&P 500" },
+  "^IXIC": { price: 25373.85, prevClose: 24975.82, name: "NASDAQ Composite" },
+  "^DJI": { price: 52485.03, prevClose: 51947.25, name: "Dow Jones Industrial Average" },
+  "^RUT": { price: 2931.34, prevClose: 2930.0, name: "Russell 2000 Index" },
+  "^VIX": { price: 15.99, prevClose: 18.67, name: "CBOE Volatility Index" },
+  "^TNX": { price: 4.745, prevClose: 4.641, name: "US 10-Year Treasury Yield" },
+};
+
+export const FALLBACK_FX: Record<string, number> = {
+  EUR: 0.8707,
+  GBP: 0.74508,
+  JPY: 160.24,
+  CHF: 0.8101,
+  CAD: 1.3742,
+  AUD: 1.5288,
+  SGD: 1.2952,
+  HKD: 7.7891,
+};
