@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { DEFAULT_MODEL_ID } from "@/lib/ai/models";
 import { Markdown } from "./Markdown";
+import { ModelSelect } from "./ModelSelect";
 
 type Task = "brief" | "email" | "commentary" | "actions";
 
@@ -23,6 +25,7 @@ export function AiWorkbench({
   const [output, setOutput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [model, setModel] = useState(DEFAULT_MODEL_ID);
 
   async function run(task: Task) {
     if (busy) return;
@@ -34,7 +37,7 @@ export function AiWorkbench({
       const res = await fetch("/api/ai/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientId, task }),
+        body: JSON.stringify({ clientId, task, model }),
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as {
@@ -68,6 +71,17 @@ export function AiWorkbench({
           generation.
         </div>
       )}
+      <div className="mb-3 flex items-center gap-3">
+        <label htmlFor="workbench-model" className="text-xs text-muted">
+          Model
+        </label>
+        <ModelSelect
+          id="workbench-model"
+          value={model}
+          onChange={setModel}
+          disabled={busy}
+        />
+      </div>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {TASKS.map((task) => (
           <button

@@ -1,4 +1,5 @@
 import "server-only";
+import { DEFAULT_MODEL_ID } from "./models";
 
 /**
  * Open Code Zen — OpenAI-compatible LLM gateway.
@@ -6,12 +7,12 @@ import "server-only";
  *
  * Configure via environment variables (see .env.example):
  *   OPENCODE_ZEN_API_KEY   – API key from opencode.ai/auth
- *   OPENCODE_ZEN_MODEL     – model id (default: a free Zen model)
+ *   OPENCODE_ZEN_MODEL     – fallback model id when a request doesn't
+ *                            specify one (default: GPT 5.6 Luna)
  *   OPENCODE_ZEN_BASE_URL  – override the gateway URL if needed
  */
 
 const DEFAULT_BASE_URL = "https://opencode.ai/zen/v1";
-const DEFAULT_MODEL = "big-pickle";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -27,7 +28,7 @@ export function getZenConfig(): {
     apiKey:
       process.env.OPENCODE_ZEN_API_KEY ?? process.env.OPENCODE_API_KEY,
     baseUrl: process.env.OPENCODE_ZEN_BASE_URL ?? DEFAULT_BASE_URL,
-    model: process.env.OPENCODE_ZEN_MODEL ?? DEFAULT_MODEL,
+    model: process.env.OPENCODE_ZEN_MODEL ?? DEFAULT_MODEL_ID,
   };
 }
 
@@ -50,10 +51,11 @@ export class ZenNotConfiguredError extends Error {
  */
 export async function streamChat(
   messages: ChatMessage[],
-  options?: { temperature?: number; maxTokens?: number },
+  options?: { model?: string; temperature?: number; maxTokens?: number },
 ): Promise<ReadableStream<Uint8Array>> {
-  const { apiKey, baseUrl, model } = getZenConfig();
+  const { apiKey, baseUrl, model: fallbackModel } = getZenConfig();
   if (!apiKey) throw new ZenNotConfiguredError();
+  const model = options?.model ?? fallbackModel;
 
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
@@ -83,29 +85,40 @@ export async function streamChat(
   let buffer = "";
 
   return new ReadableStream<Uint8Array>({
+    // Keep reading until at least one chunk is enqueued (or the upstream
+    // ends). Some models (e.g. the GPT 5.6 family) lead with many
+    // contentless keep-alive chunks; if pull() resolves without enqueuing,
+    // the stream stops being pulled and the response stalls forever.
     async pull(controller) {
-      const { done, value } = await reader.read();
-      if (done) {
-        controller.close();
-        return;
-      }
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith("data:")) continue;
-        const payload = trimmed.slice(5).trim();
-        if (payload === "[DONE]") continue;
-        try {
-          const json = JSON.parse(payload) as {
-            choices?: { delta?: { content?: string } }[];
-          };
-          const content = json.choices?.[0]?.delta?.content;
-          if (content) controller.enqueue(encoder.encode(content));
-        } catch {
-          // Ignore malformed keep-alive lines
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) {
+          controller.close();
+          return;
         }
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        let enqueued = false;
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+          const payload = trimmed.slice(5).trim();
+          if (payload === "[DONE]") continue;
+          try {
+            const json = JSON.parse(payload) as {
+              choices?: { delta?: { content?: string } }[];
+            };
+            const content = json.choices?.[0]?.delta?.content;
+            if (content) {
+              controller.enqueue(encoder.encode(content));
+              enqueued = true;
+            }
+          } catch {
+            // Ignore malformed keep-alive lines
+          }
+        }
+        if (enqueued) return;
       }
     },
     cancel(reason) {

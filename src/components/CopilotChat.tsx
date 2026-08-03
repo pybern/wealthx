@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { DEFAULT_MODEL_ID } from "@/lib/ai/models";
 import { Markdown } from "./Markdown";
+import { ModelSelect } from "./ModelSelect";
 
 interface Message {
   role: "user" | "assistant";
@@ -27,6 +29,7 @@ export function CopilotChat({
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [clientId, setClientId] = useState(initialClientId ?? "");
+  const [model, setModel] = useState(DEFAULT_MODEL_ID);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -50,6 +53,7 @@ export function CopilotChat({
         body: JSON.stringify({
           messages: next,
           clientId: clientId || undefined,
+          model,
         }),
       });
       if (!res.ok) {
@@ -85,7 +89,7 @@ export function CopilotChat({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="mb-3 flex items-center gap-3">
+      <div className="mb-3 flex flex-wrap items-center gap-3">
         <label htmlFor="focus-client" className="text-xs text-muted">
           Context
         </label>
@@ -102,6 +106,10 @@ export function CopilotChat({
             </option>
           ))}
         </select>
+        <label htmlFor="copilot-model" className="ml-2 text-xs text-muted">
+          Model
+        </label>
+        <ModelSelect id="copilot-model" value={model} onChange={setModel} />
       </div>
 
       {!configured && (
