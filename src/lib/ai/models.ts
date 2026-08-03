@@ -5,7 +5,9 @@
  *
  * The list favors fast, low-latency models; heavier flagships are included
  * for when quality matters more than speed. Ids must exist in the Zen
- * catalog (https://opencode.ai/zen/v1/models).
+ * catalog (https://opencode.ai/zen/v1/models) AND work through the
+ * /chat/completions endpoint — Gemini models don't (the gateway serves
+ * them via a different endpoint shape and returns HTTP 500 here).
  */
 
 export interface AiModel {
@@ -21,7 +23,7 @@ export const AI_MODELS: AiModel[] = [
   { id: "gpt-5.6-sol", label: "GPT 5.6 Sol", fast: false },
   { id: "claude-haiku-4-5", label: "Claude Haiku 4.5", fast: true },
   { id: "claude-sonnet-5", label: "Claude Sonnet 5", fast: false },
-  { id: "gemini-3.6-flash", label: "Gemini 3.6 Flash", fast: true },
+  { id: "gpt-5.4-mini", label: "GPT 5.4 Mini", fast: true },
   { id: "deepseek-v4-flash", label: "DeepSeek V4 Flash", fast: true },
 ];
 

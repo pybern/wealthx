@@ -57,20 +57,33 @@ export async function streamChat(
   if (!apiKey) throw new ZenNotConfiguredError();
   const model = options?.model ?? fallbackModel;
 
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      stream: true,
-      temperature: options?.temperature ?? 0.4,
-      max_tokens: options?.maxTokens ?? 2048,
-    }),
-  });
+  // Only send temperature when explicitly requested — newer models
+  // (e.g. Claude Sonnet 5) reject the parameter as deprecated.
+  const doFetch = () =>
+    fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        stream: true,
+        ...(options?.temperature !== undefined
+          ? { temperature: options.temperature }
+          : {}),
+        max_tokens: options?.maxTokens ?? 2048,
+      }),
+    });
+
+  // The gateway intermittently returns HTTP 500 for otherwise-working
+  // models; nothing has streamed yet at this point, so one retry is safe.
+  let response = await doFetch();
+  if (response.status >= 500) {
+    await new Promise((resolve) => setTimeout(resolve, 750));
+    response = await doFetch();
+  }
 
   if (!response.ok || !response.body) {
     const detail = await response.text().catch(() => "");
