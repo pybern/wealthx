@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DEFAULT_MODEL_ID } from "@/lib/ai/models";
 import { Markdown } from "./Markdown";
 import { ModelSelect } from "./ModelSelect";
@@ -26,6 +26,15 @@ export function AiWorkbench({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [model, setModel] = useState(DEFAULT_MODEL_ID);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => abortRef.current?.abort();
+  }, []);
+
+  function stop() {
+    abortRef.current?.abort();
+  }
 
   async function run(task: Task) {
     if (busy) return;
@@ -33,10 +42,14 @@ export function AiWorkbench({
     setOutput("");
     setError(null);
     setBusy(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    let acc = "";
     try {
       const res = await fetch("/api/ai/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({ clientId, task, model }),
       });
       if (!res.ok) {
@@ -48,7 +61,6 @@ export function AiWorkbench({
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No response stream");
       const decoder = new TextDecoder();
-      let acc = "";
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -56,8 +68,14 @@ export function AiWorkbench({
         setOutput(acc);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Request failed");
+      if (err instanceof DOMException && err.name === "AbortError") {
+        // Stopped by the user — keep whatever streamed so far.
+        setOutput(acc);
+      } else {
+        setError(err instanceof Error ? err.message : "Request failed");
+      }
     } finally {
+      if (abortRef.current === controller) abortRef.current = null;
       setBusy(false);
     }
   }
@@ -71,7 +89,7 @@ export function AiWorkbench({
           generation.
         </div>
       )}
-      <div className="mb-3 flex items-center gap-3">
+      <div className="mb-3 flex flex-wrap items-center gap-3">
         <label htmlFor="workbench-model" className="text-xs text-muted">
           Model
         </label>
@@ -81,6 +99,15 @@ export function AiWorkbench({
           onChange={setModel}
           disabled={busy}
         />
+        {busy && (
+          <button
+            type="button"
+            onClick={stop}
+            className="ml-auto rounded-lg border border-edge bg-surface-2 px-3 py-1.5 text-xs font-medium transition-colors hover:border-negative/60 hover:text-negative"
+          >
+            Stop
+          </button>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {TASKS.map((task) => (
@@ -88,10 +115,10 @@ export function AiWorkbench({
             key={task.id}
             onClick={() => void run(task.id)}
             disabled={busy}
-            className={`rounded-xl border p-3 text-left transition-colors disabled:opacity-50 ${
+            className={`rounded-xl border p-3 text-left transition-all duration-200 disabled:opacity-50 ${
               active === task.id
                 ? "border-accent/60 bg-accent/10"
-                : "border-edge bg-surface-2 hover:border-accent/40"
+                : "border-edge bg-surface-2 hover:-translate-y-0.5 hover:border-accent/40"
             }`}
           >
             <p className="text-sm font-medium">
@@ -102,16 +129,23 @@ export function AiWorkbench({
         ))}
       </div>
       {error && (
-        <p className="mt-3 text-sm text-negative" role="alert">
+        <p className="animate-rise-in mt-3 text-sm text-negative" role="alert">
           {error}
         </p>
       )}
       {(output || (busy && active)) && (
-        <div className="mt-4 rounded-xl border border-edge bg-surface-2 p-5">
+        <div className="animate-rise-in mt-4 rounded-xl border border-edge bg-surface-2 p-5">
           {output ? (
-            <Markdown text={output} />
+            <div className={busy ? "stream-caret" : undefined}>
+              <Markdown text={output} />
+            </div>
           ) : (
-            <p className="animate-pulse text-sm text-muted">
+            <p className="flex items-center gap-2 text-sm text-muted">
+              <span className="typing-dots inline-flex items-center" aria-hidden>
+                <span />
+                <span />
+                <span />
+              </span>
               Gathering live portfolio data and generating…
             </p>
           )}
