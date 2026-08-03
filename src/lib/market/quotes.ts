@@ -62,6 +62,10 @@ interface YahooChartMeta {
   longName?: string;
   shortName?: string;
   regularMarketTime?: number;
+  regularMarketDayHigh?: number;
+  regularMarketDayLow?: number;
+  fiftyTwoWeekHigh?: number;
+  fiftyTwoWeekLow?: number;
 }
 
 async function fetchYahooQuote(symbol: string): Promise<Quote> {
@@ -91,6 +95,10 @@ async function fetchYahooQuote(symbol: string): Promise<Quote> {
       ? new Date(meta.regularMarketTime * 1000).toISOString()
       : new Date().toISOString(),
     source: "live",
+    dayHigh: meta?.regularMarketDayHigh,
+    dayLow: meta?.regularMarketDayLow,
+    fiftyTwoWeekHigh: meta?.fiftyTwoWeekHigh,
+    fiftyTwoWeekLow: meta?.fiftyTwoWeekLow,
   };
 }
 

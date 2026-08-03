@@ -49,6 +49,8 @@ export const FALLBACK_QUOTES: Record<
   "^RUT": { price: 2931.34, prevClose: 2930.0, name: "Russell 2000 Index" },
   "^VIX": { price: 15.99, prevClose: 18.67, name: "CBOE Volatility Index" },
   "^TNX": { price: 4.745, prevClose: 4.641, name: "US 10-Year Treasury Yield" },
+  "GC=F": { price: 3392.1, prevClose: 3385.4, name: "Gold Futures" },
+  "CL=F": { price: 67.33, prevClose: 66.98, name: "WTI Crude Oil Futures" },
 };
 
 export const FALLBACK_FX: Record<string, number> = {

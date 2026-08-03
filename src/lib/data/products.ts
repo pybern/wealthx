@@ -85,4 +85,12 @@ export const MARKET_INDICES: { symbol: string; label: string }[] = [
   { symbol: "^RUT", label: "Russell 2000" },
   { symbol: "^VIX", label: "VIX" },
   { symbol: "^TNX", label: "US 10Y Yield" },
+  { symbol: "GC=F", label: "Gold" },
+  { symbol: "CL=F", label: "WTI Crude" },
+];
+
+/** Symbols shown on the Markets watchlist and scanned for live signals. */
+export const WATCHLIST = [
+  "AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "TSLA", "BRK-B", "JPM",
+  "VOO", "QQQ", "AGG", "TLT", "GLD", "VNQ", "BTC", "ETH",
 ];
