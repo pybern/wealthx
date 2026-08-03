@@ -77,7 +77,9 @@ function indexSignals(quotes: Map<string, Quote>): MarketSignal[] {
 
   for (const { symbol, label } of MARKET_INDICES) {
     const quote = quotes.get(symbol);
-    if (!quote) continue;
+    // Never derive signals from fallback baselines — their day-change is a
+    // stale spread, not a real market move.
+    if (!quote || quote.source !== "live") continue;
 
     if (symbol === "^VIX") {
       const level = quote.price;
@@ -159,7 +161,7 @@ function holdingSignals(
   const signals: MarketSignal[] = [];
   for (const symbol of symbols) {
     const quote = quotes.get(symbol);
-    if (!quote) continue;
+    if (!quote || quote.source !== "live") continue;
     const product = PRODUCT_MAP.get(symbol);
     const held = exposure.get(symbol);
     const isCrypto = product?.kind === "Crypto";
