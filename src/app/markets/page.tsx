@@ -4,12 +4,14 @@ import { getFxRates, getQuotes, getSparkline } from "@/lib/market/quotes";
 import { getMarketNews } from "@/lib/market/news";
 import { buildMarketSignals } from "@/lib/market/signals";
 import { isZenConfigured } from "@/lib/ai/zen";
-import { fmtUsd } from "@/lib/portfolio";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { DataSourceHealth } from "@/components/DataSourceHealth";
 import { MarketPulse } from "@/components/MarketPulse";
 import { NewsFeed } from "@/components/NewsFeed";
+import { QuoteFlash } from "@/components/QuoteFlash";
+import { SignalActivityTimeline } from "@/components/SignalActivityTimeline";
 import { SignalFeed } from "@/components/SignalFeed";
-import { Sparkline } from "@/components/Sparkline";
+import { WatchlistTable } from "@/components/WatchlistTable";
 import { Card, ChangePct } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +34,52 @@ export default async function MarketsPage() {
   const liveCount = [...quotes.values()].filter(
     (q) => q.source === "live",
   ).length;
+  const yahooSymbols = symbols.filter(
+    (symbol) => symbol !== "BTC" && symbol !== "ETH",
+  );
+  const yahooLive = yahooSymbols.filter(
+    (symbol) => quotes.get(symbol)?.source === "live",
+  ).length;
+  const cryptoSymbols = ["BTC", "ETH"];
+  const cryptoLive = cryptoSymbols.filter(
+    (symbol) => quotes.get(symbol)?.source === "live",
+  ).length;
+  const watchlistQuotes = WATCHLIST.flatMap((symbol) => {
+    const quote = quotes.get(symbol);
+    if (!quote) return [];
+    return [
+      {
+        symbol,
+        name: quote.name,
+        price: quote.price,
+        changePct: quote.changePct,
+        source: quote.source,
+        sparkline: sparklines.get(symbol) ?? [],
+      },
+    ];
+  });
+  const sources = [
+    {
+      name: "Yahoo Finance",
+      detail: `${yahooLive}/${yahooSymbols.length} equity, index and commodity quotes live`,
+      state: yahooLive === yahooSymbols.length ? "live" : "fallback",
+    },
+    {
+      name: "CoinGecko",
+      detail: `${cryptoLive}/${cryptoSymbols.length} crypto quotes live`,
+      state: cryptoLive === cryptoSymbols.length ? "live" : "fallback",
+    },
+    {
+      name: "ECB / Frankfurter",
+      detail: `${fx.source === "live" ? "Current" : "Fallback"} reference rates · ${fx.date}`,
+      state: fx.source === "live" ? "live" : "fallback",
+    },
+    {
+      name: "Market news",
+      detail: news.length > 0 ? `${news.length} recent headlines` : "No fresh headlines",
+      state: news.length > 0 ? "live" : "stale",
+    },
+  ] as const;
 
   return (
     <div className="space-y-6">
@@ -45,9 +93,11 @@ export default async function MarketsPage() {
           </p>
         </div>
         <p className="text-xs text-muted">
-          {liveCount}/{quotes.size} quotes live
+          Snapshot coverage: {liveCount}/{quotes.size} live
         </p>
       </header>
+
+      <DataSourceHealth sources={[...sources]} />
 
       <Card title="Indices, rates & commodities">
         <div className="grid grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-8">
@@ -56,7 +106,14 @@ export default async function MarketsPage() {
             if (!quote) return null;
             const isYield = symbol === "^TNX";
             return (
-              <div key={symbol}>
+              <QuoteFlash
+                key={symbol}
+                id={symbol}
+                fingerprint={`${quote.price}|${quote.changePct}|${quote.source}`}
+                className={`p-1.5 ${
+                  quote.source === "fallback" ? "opacity-55" : ""
+                }`}
+              >
                 <p className="text-xs text-muted">{label}</p>
                 <p className="mt-1 font-mono text-lg font-semibold tabular-nums">
                   {isYield
@@ -66,7 +123,14 @@ export default async function MarketsPage() {
                       })}
                 </p>
                 <ChangePct value={quote.changePct} />
-              </div>
+                <p
+                  className={`mt-1 text-[9px] uppercase tracking-wider ${
+                    quote.source === "live" ? "text-accent" : "text-gold"
+                  }`}
+                >
+                  {quote.source}
+                </p>
+              </QuoteFlash>
             );
           })}
         </div>
@@ -80,7 +144,10 @@ export default async function MarketsPage() {
           </p>
         }
       >
-        <SignalFeed signals={signals.signals} />
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+          <SignalFeed signals={signals.signals} />
+          <SignalActivityTimeline signals={signals.signals} />
+        </div>
       </Card>
 
       <Card
@@ -99,49 +166,7 @@ export default async function MarketsPage() {
       </Card>
 
       <Card title="Watchlist">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-edge text-left text-xs uppercase tracking-wider text-muted">
-              <th className="pb-3 pr-4 font-medium">Symbol</th>
-              <th className="pb-3 pr-4 text-right font-medium">Price</th>
-              <th className="pb-3 pr-4 text-right font-medium">Today</th>
-              <th className="pb-3 pr-4 text-right font-medium">1 month</th>
-              <th className="hidden pb-3 text-right font-medium md:table-cell">
-                Source
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-edge">
-            {WATCHLIST.map((symbol) => {
-              const quote = quotes.get(symbol);
-              if (!quote) return null;
-              return (
-                <tr key={symbol}>
-                  <td className="py-2.5 pr-4">
-                    <p className="font-mono font-medium">{symbol}</p>
-                    <p className="max-w-72 truncate text-xs text-muted">
-                      {quote.name}
-                    </p>
-                  </td>
-                  <td className="py-2.5 pr-4 text-right font-medium tabular-nums">
-                    {fmtUsd(quote.price, 2)}
-                  </td>
-                  <td className="py-2.5 pr-4 text-right">
-                    <ChangePct value={quote.changePct} />
-                  </td>
-                  <td className="py-2.5 pr-4">
-                    <div className="flex justify-end">
-                      <Sparkline values={sparklines.get(symbol) ?? []} />
-                    </div>
-                  </td>
-                  <td className="hidden py-2.5 text-right text-xs text-muted md:table-cell">
-                    {quote.source}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <WatchlistTable quotes={watchlistQuotes} />
       </Card>
 
       <Card title={`FX — USD crosses (ECB reference, ${fx.date})`}>

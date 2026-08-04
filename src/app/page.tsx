@@ -4,15 +4,18 @@ import { MARKET_INDICES } from "@/lib/data/products";
 import { buildBookInsights } from "@/lib/insights";
 import { fmtCompact, fmtPct, getPortfolios } from "@/lib/portfolio";
 import { getQuotes } from "@/lib/market/quotes";
+import { buildMarketSignals } from "@/lib/market/signals";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { SignalFeed } from "@/components/SignalFeed";
 import { Card, ChangePct, SeverityBadge, Stat } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [portfolios, indexQuotes] = await Promise.all([
+  const [portfolios, indexQuotes, marketSignals] = await Promise.all([
     getPortfolios(CLIENTS),
     getQuotes(MARKET_INDICES.map((i) => i.symbol)),
+    buildMarketSignals(),
   ]);
 
   const totalAum = [...portfolios.values()].reduce(
@@ -76,6 +79,17 @@ export default async function DashboardPage() {
           subTone={actionCount > 0 ? "negative" : "positive"}
         />
       </div>
+
+      <Card
+        title="Live signals"
+        action={
+          <Link href="/markets" className="text-xs text-accent">
+            View all signals →
+          </Link>
+        }
+      >
+        <SignalFeed signals={marketSignals.signals.slice(0, 4)} />
+      </Card>
 
       <Card title="Market pulse">
         <div className="grid grid-cols-3 gap-4 lg:grid-cols-6">

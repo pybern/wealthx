@@ -1,4 +1,8 @@
-/** Tiny pure-SVG price sparkline. Server component. */
+"use client";
+
+import { useFlashOnChange } from "./useFlashOnChange";
+
+/** Tiny SVG sparkline whose last point pulses when the series updates. */
 export function Sparkline({
   values,
   width = 120,
@@ -8,6 +12,10 @@ export function Sparkline({
   width?: number;
   height?: number;
 }) {
+  const fingerprint = values.join(",");
+  const changed = useFlashOnChange([{ id: "series", fingerprint }]).has(
+    "series",
+  );
   if (values.length < 2) {
     return <div style={{ width, height }} />;
   }
@@ -24,9 +32,16 @@ export function Sparkline({
     .join(" ");
   const up = values[values.length - 1] >= values[0];
   const color = up ? "#34d399" : "#f87171";
+  const lastPoint = points.split(" ").at(-1)?.split(",").map(Number);
 
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      aria-label={`${up ? "Rising" : "Falling"} price trend`}
+      role="img"
+    >
       <polyline
         points={points}
         fill="none"
@@ -35,6 +50,15 @@ export function Sparkline({
         strokeLinejoin="round"
         strokeLinecap="round"
       />
+      {lastPoint && (
+        <circle
+          cx={lastPoint[0]}
+          cy={lastPoint[1]}
+          r="2.25"
+          fill={color}
+          className={changed ? "spark-endpoint" : undefined}
+        />
+      )}
     </svg>
   );
 }

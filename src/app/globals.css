@@ -154,11 +154,72 @@ body {
   animation: signal-flash 1.6s ease-out;
 }
 
+@keyframes live-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(52, 211, 153, 0);
+  }
+}
+.live-status-dot {
+  animation: live-pulse 1.8s ease-out infinite;
+}
+
+@keyframes quote-flash {
+  0% {
+    color: var(--accent);
+    background: rgba(52, 211, 153, 0.2);
+  }
+  100% {
+    color: inherit;
+    background: transparent;
+  }
+}
+.quote-flash {
+  animation: quote-flash 1.4s ease-out;
+}
+
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.ticker-track {
+  animation: ticker-scroll 48s linear infinite;
+}
+.ticker-viewport:hover .ticker-track {
+  animation-play-state: paused;
+}
+
+@keyframes endpoint-pulse {
+  0%,
+  100% {
+    r: 2.25px;
+    opacity: 1;
+  }
+  50% {
+    r: 4px;
+    opacity: 0.35;
+  }
+}
+.spark-endpoint {
+  animation: endpoint-pulse 1.4s ease-out 2;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-rise-in,
   .stream-caret::after,
   .typing-dots span,
-  .signal-flash {
+  .signal-flash,
+  .live-status-dot,
+  .quote-flash,
+  .ticker-track,
+  .spark-endpoint {
     animation: none;
   }
 }

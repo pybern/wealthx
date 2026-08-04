@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 export default function InsightsPage() {
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col space-y-4">
+    <div className="mx-auto flex h-[clamp(30rem,65vh,40rem)] w-full max-w-4xl flex-col space-y-4">
       <header className="flex items-end justify-between">
         <div>
           <h1 className="text-xl font-semibold">Live Insights</h1>
