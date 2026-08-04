@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { LiveMarketBar } from "@/components/LiveMarketBar";
 import { Sidebar } from "@/components/Sidebar";
 
 const geistSans = Geist({
@@ -32,9 +33,12 @@ export default function RootLayout({
       <body className="min-h-full">
         <div className="flex">
           <Sidebar />
-          <main className="min-h-screen min-w-0 flex-1 px-8 py-7">
-            {children}
-          </main>
+          <div className="min-w-0 flex-1">
+            <LiveMarketBar />
+            <main className="min-h-[calc(100vh-4.25rem)] px-8 py-7">
+              {children}
+            </main>
+          </div>
         </div>
       </body>
     </html>
