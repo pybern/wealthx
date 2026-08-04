@@ -5,6 +5,7 @@ import {
   getMarketSnapshot,
   RM_SYSTEM_PROMPT,
 } from "@/lib/ai/context";
+import { isSupportedModel } from "@/lib/ai/models";
 import {
   streamChat,
   ZenNotConfiguredError,
@@ -18,6 +19,7 @@ export const maxDuration = 60;
 interface ChatRequestBody {
   messages: { role: "user" | "assistant"; content: string }[];
   clientId?: string;
+  model?: string;
 }
 
 const MAX_MESSAGES = 30;
@@ -47,6 +49,9 @@ export async function POST(request: NextRequest): Promise<Response> {
       return NextResponse.json({ error: "Invalid message" }, { status: 400 });
     }
   }
+  if (body.model !== undefined && !isSupportedModel(body.model)) {
+    return NextResponse.json({ error: "Unsupported model" }, { status: 400 });
+  }
 
   try {
     const [marketSnapshot, context] = await Promise.all([
@@ -65,7 +70,9 @@ export async function POST(request: NextRequest): Promise<Response> {
       content: `${RM_SYSTEM_PROMPT}\n\nLIVE MARKET SNAPSHOT (as of now)\n${marketSnapshot}\n\n${context}`,
     };
 
-    const stream = await streamChat([system, ...messages]);
+    const stream = await streamChat([system, ...messages], {
+      model: body.model,
+    });
     return new Response(stream, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",

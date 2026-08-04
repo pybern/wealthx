@@ -1,25 +1,25 @@
-import { MARKET_INDICES, PRODUCTS } from "@/lib/data/products";
+import { MARKET_INDICES, PRODUCTS, WATCHLIST } from "@/lib/data/products";
 import { getFxRates, getQuotes, getSparkline } from "@/lib/market/quotes";
+import { buildMarketSignals } from "@/lib/market/signals";
+import { isZenConfigured } from "@/lib/ai/zen";
 import { fmtUsd } from "@/lib/portfolio";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { MarketPulse } from "@/components/MarketPulse";
+import { SignalFeed } from "@/components/SignalFeed";
 import { Sparkline } from "@/components/Sparkline";
 import { Card, ChangePct } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-const WATCHLIST = [
-  "AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "TSLA", "BRK-B", "JPM",
-  "VOO", "QQQ", "AGG", "TLT", "GLD", "VNQ", "BTC", "ETH",
-];
-
 export default async function MarketsPage() {
   const symbols = [...MARKET_INDICES.map((i) => i.symbol), ...WATCHLIST];
-  const [quotes, fx, sparklines] = await Promise.all([
+  const [quotes, fx, sparklines, signals] = await Promise.all([
     getQuotes(symbols),
     getFxRates(),
     Promise.all(
       WATCHLIST.map(async (s) => [s, await getSparkline(s)] as const),
     ).then((entries) => new Map(entries)),
+    buildMarketSignals(),
   ]);
 
   const liveCount = [...quotes.values()].filter(
@@ -42,8 +42,8 @@ export default async function MarketsPage() {
         </p>
       </header>
 
-      <Card title="Indices & rates">
-        <div className="grid grid-cols-2 gap-5 md:grid-cols-3 xl:grid-cols-6">
+      <Card title="Indices, rates & commodities">
+        <div className="grid grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-8">
           {MARKET_INDICES.map(({ symbol, label }) => {
             const quote = quotes.get(symbol);
             if (!quote) return null;
@@ -63,6 +63,21 @@ export default async function MarketsPage() {
             );
           })}
         </div>
+      </Card>
+
+      <Card
+        title="Live signals"
+        action={
+          <p className="text-xs text-muted">
+            Derived from live quotes + book exposure
+          </p>
+        }
+      >
+        <SignalFeed signals={signals.signals} />
+      </Card>
+
+      <Card title="AI market pulse">
+        <MarketPulse configured={isZenConfigured()} />
       </Card>
 
       <Card title="Watchlist">

@@ -1,5 +1,5 @@
 import { CLIENTS } from "@/lib/data/clients";
-import { getZenConfig, isZenConfigured } from "@/lib/ai/zen";
+import { isZenConfigured } from "@/lib/ai/zen";
 import { CopilotChat } from "@/components/CopilotChat";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,6 @@ export default async function AssistantPage({
 }) {
   const { client } = await searchParams;
   const configured = isZenConfigured();
-  const { model } = getZenConfig();
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col space-y-4">
@@ -23,9 +22,7 @@ export default async function AssistantPage({
             Open Code Zen.
           </p>
         </div>
-        <p className="text-xs text-muted">
-          {configured ? `Model: ${model}` : "Not configured"}
-        </p>
+        {!configured && <p className="text-xs text-muted">Not configured</p>}
       </header>
       <div className="min-h-0 flex-1">
         <CopilotChat

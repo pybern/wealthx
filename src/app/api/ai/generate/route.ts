@@ -6,6 +6,7 @@ import {
   TASK_PROMPTS,
   type AiTask,
 } from "@/lib/ai/context";
+import { isSupportedModel } from "@/lib/ai/models";
 import { streamChat, ZenNotConfiguredError } from "@/lib/ai/zen";
 import { getClient } from "@/lib/data/clients";
 
@@ -15,6 +16,7 @@ export const maxDuration = 60;
 interface GenerateRequestBody {
   clientId: string;
   task: AiTask;
+  model?: string;
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -36,6 +38,9 @@ export async function POST(request: NextRequest): Promise<Response> {
   if (!client) {
     return NextResponse.json({ error: "Unknown client" }, { status: 404 });
   }
+  if (body.model !== undefined && !isSupportedModel(body.model)) {
+    return NextResponse.json({ error: "Unsupported model" }, { status: 400 });
+  }
 
   try {
     const [marketSnapshot, context] = await Promise.all([
@@ -43,13 +48,16 @@ export async function POST(request: NextRequest): Promise<Response> {
       buildClientContext(client),
     ]);
 
-    const stream = await streamChat([
-      {
-        role: "system",
-        content: `${RM_SYSTEM_PROMPT}\n\nLIVE MARKET SNAPSHOT (as of now)\n${marketSnapshot}\n\n${context}`,
-      },
-      { role: "user", content: taskPrompt },
-    ]);
+    const stream = await streamChat(
+      [
+        {
+          role: "system",
+          content: `${RM_SYSTEM_PROMPT}\n\nLIVE MARKET SNAPSHOT (as of now)\n${marketSnapshot}\n\n${context}`,
+        },
+        { role: "user", content: taskPrompt },
+      ],
+      { model: body.model },
+    );
 
     return new Response(stream, {
       headers: {

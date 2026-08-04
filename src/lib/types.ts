@@ -103,6 +103,12 @@ export interface Quote {
   currency: string;
   asOf: string;
   source: "live" | "fallback";
+  /** Intraday range, when the source provides it */
+  dayHigh?: number;
+  dayLow?: number;
+  /** 52-week range, when the source provides it */
+  fiftyTwoWeekHigh?: number;
+  fiftyTwoWeekLow?: number;
 }
 
 export interface FxRates {

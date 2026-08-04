@@ -62,18 +62,41 @@ interface YahooChartMeta {
   longName?: string;
   shortName?: string;
   regularMarketTime?: number;
+  regularMarketDayHigh?: number;
+  regularMarketDayLow?: number;
+  fiftyTwoWeekHigh?: number;
+  fiftyTwoWeekLow?: number;
 }
 
 async function fetchYahooQuote(symbol: string): Promise<Quote> {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=5d`;
   const json = (await fetchJson(url)) as {
-    chart?: { result?: { meta?: YahooChartMeta }[] };
+    chart?: {
+      result?: {
+        meta?: YahooChartMeta;
+        indicators?: { quote?: { close?: (number | null)[] }[] };
+      }[];
+    };
   };
-  const meta = json.chart?.result?.[0]?.meta;
+  const result = json.chart?.result?.[0];
+  const meta = result?.meta;
   const price = meta?.regularMarketPrice;
   if (typeof price !== "number") throw new Error(`No price for ${symbol}`);
-  const prevClose =
-    meta?.chartPreviousClose ?? meta?.previousClose ?? price;
+
+  // meta.chartPreviousClose is the close before the requested range (~5
+  // trading days ago), which wildly overstates "today's" move. Derive the
+  // true previous close from the daily candles: if the last candle is
+  // today's (close ≈ current price), the one before it is yesterday's.
+  const closes = (result?.indicators?.quote?.[0]?.close ?? []).filter(
+    (c): c is number => typeof c === "number",
+  );
+  let prevClose = meta?.previousClose ?? meta?.chartPreviousClose ?? price;
+  if (closes.length >= 2) {
+    const last = closes[closes.length - 1];
+    const secondLast = closes[closes.length - 2];
+    prevClose =
+      Math.abs(last - price) / price < 0.0005 ? secondLast : last;
+  }
   return {
     symbol,
     name:
@@ -91,6 +114,10 @@ async function fetchYahooQuote(symbol: string): Promise<Quote> {
       ? new Date(meta.regularMarketTime * 1000).toISOString()
       : new Date().toISOString(),
     source: "live",
+    dayHigh: meta?.regularMarketDayHigh,
+    dayLow: meta?.regularMarketDayLow,
+    fiftyTwoWeekHigh: meta?.fiftyTwoWeekHigh,
+    fiftyTwoWeekLow: meta?.fiftyTwoWeekLow,
   };
 }
 

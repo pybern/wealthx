@@ -5,27 +5,12 @@ import { DEFAULT_MODEL_ID } from "@/lib/ai/models";
 import { Markdown } from "./Markdown";
 import { ModelSelect } from "./ModelSelect";
 
-type Task = "brief" | "email" | "commentary" | "actions";
-
-const TASKS: { id: Task; label: string; description: string }[] = [
-  { id: "brief", label: "Meeting brief", description: "Pre-meeting prep with talking points" },
-  { id: "actions", label: "Next best actions", description: "Prioritized to-do list for this client" },
-  { id: "email", label: "Draft email", description: "Personalized check-in email" },
-  { id: "commentary", label: "Portfolio commentary", description: "Quarterly-letter narrative" },
-];
-
-export function AiWorkbench({
-  clientId,
-  configured,
-}: {
-  clientId: string;
-  configured: boolean;
-}) {
-  const [active, setActive] = useState<Task | null>(null);
+export function MarketPulse({ configured }: { configured: boolean }) {
   const [output, setOutput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [model, setModel] = useState(DEFAULT_MODEL_ID);
+  const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -36,21 +21,21 @@ export function AiWorkbench({
     abortRef.current?.abort();
   }
 
-  async function run(task: Task) {
+  async function generate() {
     if (busy) return;
-    setActive(task);
     setOutput("");
     setError(null);
+    setGeneratedAt(null);
     setBusy(true);
     const controller = new AbortController();
     abortRef.current = controller;
     let acc = "";
     try {
-      const res = await fetch("/api/ai/generate", {
+      const res = await fetch("/api/ai/market-pulse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
-        body: JSON.stringify({ clientId, task, model }),
+        body: JSON.stringify({ model }),
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as {
@@ -67,9 +52,14 @@ export function AiWorkbench({
         acc += decoder.decode(value, { stream: true });
         setOutput(acc);
       }
+      setGeneratedAt(
+        new Date().toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      );
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
-        // Stopped by the user — keep whatever streamed so far.
         setOutput(acc);
       } else {
         setError(err instanceof Error ? err.message : "Request failed");
@@ -80,60 +70,53 @@ export function AiWorkbench({
     }
   }
 
+  if (!configured) {
+    return (
+      <p className="text-sm text-muted">
+        Set <code className="font-mono">OPENCODE_ZEN_API_KEY</code> in{" "}
+        <code className="font-mono">.env.local</code> to enable the AI market
+        pulse.
+      </p>
+    );
+  }
+
   return (
     <div>
-      {!configured && (
-        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
-          Set <code className="font-mono">OPENCODE_ZEN_API_KEY</code> in{" "}
-          <code className="font-mono">.env.local</code> to enable AI
-          generation.
-        </div>
-      )}
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <label htmlFor="workbench-model" className="text-xs text-muted">
-          Model
-        </label>
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="mr-auto text-sm text-muted">
+          A grounded read of what&apos;s moving right now and what it means
+          for your book.
+        </p>
         <ModelSelect
-          id="workbench-model"
+          id="pulse-model"
           value={model}
           onChange={setModel}
           disabled={busy}
         />
-        {busy && (
+        {busy ? (
           <button
             type="button"
             onClick={stop}
-            className="ml-auto rounded-lg border border-edge bg-surface-2 px-3 py-1.5 text-xs font-medium transition-colors hover:border-negative/60 hover:text-negative"
+            className="rounded-lg border border-edge bg-surface-2 px-4 py-1.5 text-sm font-medium transition-colors hover:border-negative/60 hover:text-negative"
           >
             Stop
           </button>
-        )}
-      </div>
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        {TASKS.map((task) => (
+        ) : (
           <button
-            key={task.id}
-            onClick={() => void run(task.id)}
-            disabled={busy}
-            className={`rounded-xl border p-3 text-left transition-all duration-200 disabled:opacity-50 ${
-              active === task.id
-                ? "border-accent/60 bg-accent/10"
-                : "border-edge bg-surface-2 hover:-translate-y-0.5 hover:border-accent/40"
-            }`}
+            type="button"
+            onClick={() => void generate()}
+            className="rounded-lg bg-accent px-4 py-1.5 text-sm font-medium text-black transition-all duration-150 hover:brightness-110 active:scale-[0.97]"
           >
-            <p className="text-sm font-medium">
-              {busy && active === task.id ? "Generating…" : task.label}
-            </p>
-            <p className="mt-0.5 text-xs text-muted">{task.description}</p>
+            {output ? "Regenerate" : "Generate pulse"}
           </button>
-        ))}
+        )}
       </div>
       {error && (
         <p className="animate-rise-in mt-3 text-sm text-negative" role="alert">
           {error}
         </p>
       )}
-      {(output || (busy && active)) && (
+      {(output || busy) && (
         <div className="animate-rise-in mt-4 rounded-xl border border-edge bg-surface-2 p-5">
           {output ? (
             <div className={busy ? "stream-caret" : undefined}>
@@ -146,7 +129,13 @@ export function AiWorkbench({
                 <span />
                 <span />
               </span>
-              Gathering live portfolio data and generating…
+              Reading live market data and your book…
+            </p>
+          )}
+          {generatedAt && !busy && (
+            <p className="mt-3 border-t border-edge pt-3 text-xs text-muted">
+              Generated at {generatedAt} from live market data. Regenerates
+              fresh on demand as quotes update.
             </p>
           )}
         </div>
