@@ -13,7 +13,7 @@ export default async function AssistantPage({
   const configured = isZenConfigured();
 
   return (
-    <div className="flex h-[clamp(30rem,65vh,40rem)] flex-col space-y-4">
+    <div className="mx-auto flex h-[clamp(30rem,65vh,40rem)] w-full max-w-4xl flex-col space-y-4">
       <header className="flex items-end justify-between">
         <div>
           <h1 className="text-xl font-semibold">AI Copilot</h1>
