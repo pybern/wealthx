@@ -1,10 +1,13 @@
 import { MARKET_INDICES, PRODUCTS, WATCHLIST } from "@/lib/data/products";
+import { CLIENTS } from "@/lib/data/clients";
 import { getFxRates, getQuotes, getSparkline } from "@/lib/market/quotes";
+import { getMarketNews } from "@/lib/market/news";
 import { buildMarketSignals } from "@/lib/market/signals";
 import { isZenConfigured } from "@/lib/ai/zen";
 import { fmtUsd } from "@/lib/portfolio";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { MarketPulse } from "@/components/MarketPulse";
+import { NewsFeed } from "@/components/NewsFeed";
 import { SignalFeed } from "@/components/SignalFeed";
 import { Sparkline } from "@/components/Sparkline";
 import { Card, ChangePct } from "@/components/ui";
@@ -13,14 +16,18 @@ export const dynamic = "force-dynamic";
 
 export default async function MarketsPage() {
   const symbols = [...MARKET_INDICES.map((i) => i.symbol), ...WATCHLIST];
-  const [quotes, fx, sparklines, signals] = await Promise.all([
+  const [quotes, fx, sparklines, signals, news] = await Promise.all([
     getQuotes(symbols),
     getFxRates(),
     Promise.all(
       WATCHLIST.map(async (s) => [s, await getSparkline(s)] as const),
     ).then((entries) => new Map(entries)),
     buildMarketSignals(),
+    getMarketNews(),
   ]);
+  const heldSymbols = [
+    ...new Set(CLIENTS.flatMap((c) => c.holdings.map((h) => h.symbol))),
+  ];
 
   const liveCount = [...quotes.values()].filter(
     (q) => q.source === "live",
@@ -74,6 +81,17 @@ export default async function MarketsPage() {
         }
       >
         <SignalFeed signals={signals.signals} />
+      </Card>
+
+      <Card
+        title="Market news"
+        action={
+          <p className="text-xs text-muted">
+            Live headlines · tickers in your book highlighted
+          </p>
+        }
+      >
+        <NewsFeed items={news} heldSymbols={heldSymbols} />
       </Card>
 
       <Card title="AI market pulse">
