@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useFlashOnChange } from "./useFlashOnChange";
 
 interface LiveQuote {
@@ -17,15 +17,16 @@ interface MarketResponse {
 }
 
 const REFRESH_SECONDS = 60;
+const NEW_YORK_CLOCK = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  weekday: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
 
 function isUsMarketOpen(now: Date): boolean {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(now);
+  const parts = NEW_YORK_CLOCK.formatToParts(now);
   const value = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((part) => part.type === type)?.value;
   const weekday = value("weekday");
@@ -100,7 +101,7 @@ export function LiveMarketBar() {
         ? "Live data connected"
         : "Some sources on fallback";
 
-  const tickerItems = useMemo(() => data?.quotes ?? [], [data]);
+  const tickerItems = data?.quotes ?? [];
 
   return (
     <div className="sticky top-0 z-30 border-b border-edge bg-background/95 backdrop-blur">
@@ -141,6 +142,7 @@ export function LiveMarketBar() {
             {[...tickerItems, ...tickerItems].map((quote, index) => (
               <div
                 key={`${quote.symbol}-${index}`}
+                aria-hidden={index >= tickerItems.length}
                 className={`flex items-center gap-2 whitespace-nowrap rounded px-1.5 py-0.5 text-xs ${
                   flashIds.has(quote.symbol) ? "quote-flash" : ""
                 } ${quote.source === "fallback" ? "opacity-55" : ""}`}
