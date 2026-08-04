@@ -140,10 +140,25 @@ body {
   animation-delay: 0.3s;
 }
 
+@keyframes signal-flash {
+  0% {
+    background-color: rgba(52, 211, 153, 0.18);
+    border-color: rgba(52, 211, 153, 0.55);
+  }
+  100% {
+    background-color: var(--surface-2);
+    border-color: var(--border);
+  }
+}
+.signal-flash {
+  animation: signal-flash 1.6s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-rise-in,
   .stream-caret::after,
-  .typing-dots span {
+  .typing-dots span,
+  .signal-flash {
     animation: none;
   }
 }

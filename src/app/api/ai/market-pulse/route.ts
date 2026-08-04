@@ -6,6 +6,7 @@ import {
 } from "@/lib/ai/context";
 import { isSupportedModel } from "@/lib/ai/models";
 import { streamChat, ZenNotConfiguredError } from "@/lib/ai/zen";
+import { getMarketNews, newsText } from "@/lib/market/news";
 import { buildMarketSignals, signalsText } from "@/lib/market/signals";
 
 export const runtime = "nodejs";
@@ -16,8 +17,8 @@ interface MarketPulseRequestBody {
 }
 
 const PULSE_PROMPT = `Write a "market pulse" briefing for the RM based on the live data above. Structure:
-1. **What's moving** — 2-4 bullets on the most notable index, rate, commodity and volatility action right now.
-2. **What it means for your book** — connect today's moves and the live signals to actual book exposure (name clients or positions only where the data supports it).
+1. **What's moving** — 2-4 bullets on the most notable index, rate, commodity and volatility action right now. Weave in the one or two most relevant headlines where they explain a move.
+2. **What it means for your book** — connect today's moves, the live signals and any relevant headlines to actual book exposure (name clients or positions only where the data supports it).
 3. **Suggested actions** — 2-3 concrete, prioritized steps for today (outreach, rebalancing conversations, harvesting, deploying cash).
 Keep it under 250 words, grounded strictly in the data provided. This is a point-in-time read, not investment advice.`;
 
@@ -35,9 +36,10 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   try {
-    const [marketSnapshot, signals, bookContext] = await Promise.all([
+    const [marketSnapshot, signals, news, bookContext] = await Promise.all([
       getMarketSnapshot(),
       buildMarketSignals(),
+      getMarketNews(),
       buildBookContext(),
     ]);
 
@@ -45,7 +47,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       [
         {
           role: "system",
-          content: `${RM_SYSTEM_PROMPT}\n\nLIVE MARKET SNAPSHOT (as of now)\n${marketSnapshot}\n\nLIVE MARKET SIGNALS\n${signalsText(signals)}\n\n${bookContext}`,
+          content: `${RM_SYSTEM_PROMPT}\n\nLIVE MARKET SNAPSHOT (as of now)\n${marketSnapshot}\n\nLIVE MARKET SIGNALS\n${signalsText(signals)}\n\nLATEST MARKET HEADLINES\n${newsText(news)}\n\n${bookContext}`,
         },
         { role: "user", content: PULSE_PROMPT },
       ],

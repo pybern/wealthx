@@ -1,4 +1,7 @@
+"use client";
+
 import type { MarketSignal, SignalDirection } from "@/lib/market/signals";
+import { useFlashOnChange } from "./useFlashOnChange";
 
 const DIRECTION_STYLES: Record<SignalDirection, string> = {
   up: "bg-accent/10 text-accent border-accent/30",
@@ -13,6 +16,14 @@ const DIRECTION_GLYPHS: Record<SignalDirection, string> = {
 };
 
 export function SignalFeed({ signals }: { signals: MarketSignal[] }) {
+  // Flash entries whose content changed on the last auto-refresh.
+  const flashIds = useFlashOnChange(
+    signals.map((s) => ({
+      id: s.id,
+      fingerprint: `${s.title}|${s.detail}`,
+    })),
+  );
+
   if (signals.length === 0) {
     return (
       <p className="text-sm text-muted">
@@ -27,7 +38,9 @@ export function SignalFeed({ signals }: { signals: MarketSignal[] }) {
       {signals.map((signal) => (
         <li
           key={signal.id}
-          className="animate-rise-in flex items-start gap-3 rounded-xl border border-edge bg-surface-2 px-4 py-3"
+          className={`animate-rise-in flex items-start gap-3 rounded-xl border border-edge bg-surface-2 px-4 py-3 ${
+            flashIds.has(signal.id) ? "signal-flash" : ""
+          }`}
         >
           <span
             className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[10px] ${DIRECTION_STYLES[signal.direction]}`}
