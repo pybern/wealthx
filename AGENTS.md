@@ -10,6 +10,12 @@ WealthLens is a **single-service Next.js 16 app** (App Router, server components
 - Build: `npm run build` (also runs the TypeScript check). Use `npm run start` only for the production build.
 - There is no automated test runner configured; verify changes via lint, build, and manual exercise of the UI/API routes.
 
+### eve Live Insights agent — needs Node 24
+- The repo embeds a [Vercel eve](https://eve.dev) agent (`agent/`) mounted into Next via `withEve()` in `next.config.ts`; routes at `/eve/v1/*`, browser UI at `/insights` (`useEveAgent`).
+- **eve requires Node >= 24, but the VM default is 22.** Run the dev server with nvm's Node 24 or the eve runtime won't boot: `export PATH="$HOME/.nvm/versions/node/v24.19.0/bin:$PATH" && npm run dev` (install once with `nvm install 24`). `next build` works on either version.
+- The agent's model routes through Open Code Zen (same `OPENCODE_ZEN_API_KEY`), default `gpt-5.6-luna`; override with `EVE_INSIGHTS_MODEL`. Its tools consume the app's `/api/live/*` endpoints (`WEALTHLENS_BASE_URL` if the app isn't on localhost:3000).
+- Debug with `npx eve info` (discovery/diagnostics) and `npx eve invoke -u http://localhost:3000 "<prompt>"` (end-to-end turn without the UI). eve writes gitignored artifacts to `.eve/`.
+
 ### Live data & network egress
 - Pages fetch **live, keyless** market data on the server (Yahoo Finance for stocks/ETFs/indices, CoinGecko for BTC/ETH, Frankfurter/ECB for FX) and auto-refresh ~every 60s. Egress to these hosts works in the cloud VM.
 - If a source is unreachable, quotes degrade to a baked-in baseline labeled `fallback` (`src/lib/market/fallback.ts`) — the app never hard-fails offline, so a `fallback` label is expected behavior, not a bug.
