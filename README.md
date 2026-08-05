@@ -11,7 +11,7 @@ A wealth-management intelligence platform built for **relationship managers (RMs
 | **Client 360** | Live-priced holdings with unrealized P&L, asset-allocation donut, drift vs risk-profile target, goals with funding progress, advisor notes, activity timeline, per-client alerts |
 | **Markets** | Live indices, a 16-symbol watchlist with 1-month sparklines, USD FX crosses (ECB reference rates) — auto-refreshes every minute |
 | **Products** | Shelf of 37 real instruments (stocks, Vanguard/iShares/Schwab/Invesco ETFs, BTC/ETH) with live prices, expense ratios and yields |
-| **AI Copilot** | Streaming chat grounded in live prices + the full book (or one focused client), via Open Code Zen |
+| **Copilot** | One unified chat: a durable [eve](https://eve.dev) agent (model via Open Code Zen) with live tools — market snapshot, derived signals, headlines, book overview, per-client details — plus RAG tools over the firm knowledge base. Supports a focus-client context and cites knowledge sources |
 | **AI Workbench** | One-click per-client generation: meeting brief, next-best-actions, check-in email draft, quarterly portfolio commentary |
 | **Insights engine** | Deterministic rules that flag: allocation drift, single-stock concentration, cash drag, overdue reviews, stale contact, large daily moves, tax-loss-harvest candidates, RMD deadlines |
 
@@ -24,6 +24,20 @@ A wealth-management intelligence platform built for **relationship managers (RMs
 | Frankfurter (ECB) | USD FX crosses | 10min cache |
 
 If a source is unreachable, quotes degrade to a baked-in last-known baseline and are labeled `fallback` — the app never breaks offline.
+
+### RAG knowledge corpus (Vercel Blob)
+
+`data/rag-corpus/` holds a simulated internal knowledge base — firm policies (CIO outlook, fee schedule, approved product shelf), compliance manuals, advisor playbooks (concentrated stock, tax-loss harvesting, RMD/QCD, cash deployment), a fixed-income desk note, and meeting/call records for several client households. The documents cross-reference the simulated clients and real products, so retrieval-augmented answers can cite them.
+
+Seed the corpus into a **private Vercel Blob store**:
+
+```bash
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_... npm run seed:blob
+```
+
+The script uploads every document under the `rag/` prefix with stable pathnames (idempotent — safe to re-run) plus a `rag/manifest.json` index. Because the store is private, read documents back server-side with `get(pathname, { access: "private" })` or `list()` from `@vercel/blob` — blob URLs are not publicly fetchable.
+
+Retrieval is served by `/api/live/knowledge` (`?q=` keyword search over section chunks, `?path=` full document, no params for the corpus listing) from `src/lib/rag/knowledge.ts`, and exposed to the Copilot agent as the `search_knowledge` and `read_knowledge_doc` tools — answers cite the source document path.
 
 ## Getting started
 
@@ -58,10 +72,11 @@ src/
 │   ├── clients/                  # Client list + client 360
 │   ├── markets/                  # Live markets
 │   ├── products/                 # Product shelf
-│   ├── assistant/                # AI copilot chat
-│   └── api/ai/
-│       ├── chat/route.ts         # Streaming chat (book or client context)
-│       └── generate/route.ts     # Task generation (brief/email/commentary/actions)
+│   ├── assistant/                # Unified Copilot chat (eve agent)
+│   └── api/
+│       ├── ai/generate/route.ts  # Workbench task generation (brief/email/commentary/actions)
+│       ├── ai/market-pulse/      # Dashboard market-pulse generation
+│       └── live/                 # Live-data endpoints (book, client, market, news, signals, knowledge)
 ├── components/                   # UI + client components (chat, workbench, charts)
 └── lib/
     ├── data/clients.ts           # 8 simulated households (rich personas)
@@ -69,7 +84,16 @@ src/
     ├── market/quotes.ts          # Live quote layer: cache + fallback
     ├── portfolio.ts              # Valuation, allocation, drift math
     ├── insights.ts               # Rule-based alert engine
+    ├── rag/knowledge.ts          # Knowledge-base retrieval over the blob corpus
     └── ai/                       # Zen client + prompt-context builders
+
+agent/                            # eve agent: the Copilot's brain
+├── agent.ts                      # Model config (Open Code Zen via EVE_INSIGHTS_MODEL)
+├── instructions.md               # Unified copilot instructions
+├── channels/eve.ts               # Browser channel (useEveAgent at /eve/v1/*)
+└── tools/                        # get_book_overview, get_client_details, get_live_signals,
+                                  # get_market_news, get_market_snapshot,
+                                  # search_knowledge, read_knowledge_doc
 ```
 
 Stack: Next.js 16 (App Router, server components), TypeScript strict, Tailwind CSS 4. Pages render on the server with fresh quotes and auto-refresh every 60 seconds; charts are dependency-free SVG.
