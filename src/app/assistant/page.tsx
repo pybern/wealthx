@@ -12,7 +12,7 @@ export default async function AssistantPage({
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col space-y-4">
-      <header className="flex items-end justify-between">
+      <header className="mx-auto flex w-full max-w-3xl items-end justify-between">
         <div>
           <h1 className="text-xl font-semibold">Copilot</h1>
           <p className="mt-1 text-sm text-muted">
@@ -20,7 +20,6 @@ export default async function AssistantPage({
             firm&apos;s knowledge base. Powered by eve + Open Code Zen.
           </p>
         </div>
-        <p className="text-xs text-muted">Powered by eve</p>
       </header>
       <div className="min-h-0 flex-1">
         <AgentChat
