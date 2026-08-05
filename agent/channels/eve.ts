@@ -1,9 +1,12 @@
 import { eveChannel } from "eve/channels/eve";
-import { localDev, vercelOidc } from "eve/channels/auth";
+import { none } from "eve/channels/auth";
 
 /**
- * HTTP entry point for the browser UI (useEveAgent). Vercel OIDC callers
- * are accepted in deployed environments; localhost is open in local dev;
- * everything else gets a 401.
+ * HTTP entry point for the browser UI (useEveAgent).
+ *
+ * WealthLens is an unauthenticated demo with simulated client data and
+ * read-only agent tools, so its browser-facing agent route follows the
+ * same public access policy as the rest of the app. Replace this with the
+ * app's user/session auth policy before connecting real client data.
  */
-export default eveChannel({ auth: [vercelOidc(), localDev()] });
+export default eveChannel({ auth: [none()] });
