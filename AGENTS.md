@@ -10,10 +10,10 @@ WealthLens is a **single-service Next.js 16 app** (App Router, server components
 - Build: `npm run build` (also runs the TypeScript check). Use `npm run start` only for the production build.
 - There is no automated test runner configured; verify changes via lint, build, and manual exercise of the UI/API routes.
 
-### eve Live Insights agent — needs Node 24
-- The repo embeds a [Vercel eve](https://eve.dev) agent (`agent/`) mounted into Next via `withEve()` in `next.config.ts`; routes at `/eve/v1/*`, browser UI at `/insights` (`useEveAgent`).
+### eve Copilot agent — needs Node 24
+- The repo embeds a [Vercel eve](https://eve.dev) agent (`agent/`) mounted into Next via `withEve()` in `next.config.ts`; routes at `/eve/v1/*`. The **unified chat UI is at `/assistant`** (`useEveAgent`); `/insights` permanently redirects there. There is no separate direct-Zen chat route anymore — all chat goes through the eve agent (the Zen streaming path remains only for the AI Workbench `/api/ai/generate` and dashboard market pulse `/api/ai/market-pulse`).
 - **eve requires Node >= 24, but the VM default is 22.** Run the dev server with nvm's Node 24 or the eve runtime won't boot: `export PATH="$HOME/.nvm/versions/node/v24.19.0/bin:$PATH" && npm run dev` (install once with `nvm install 24`). `next build` works on either version.
-- The agent's model routes through Open Code Zen (same `OPENCODE_ZEN_API_KEY`), default `gpt-5.6-luna`; override with `EVE_INSIGHTS_MODEL`. Its tools consume the app's `/api/live/*` endpoints (`WEALTHLENS_BASE_URL` if the app isn't on localhost:3000).
+- The agent's model routes through Open Code Zen (same `OPENCODE_ZEN_API_KEY`), default `gpt-5.6-luna`; override with `EVE_INSIGHTS_MODEL`. Its tools consume the app's `/api/live/*` endpoints (`WEALTHLENS_BASE_URL` if the app isn't on localhost:3000), including `/api/live/knowledge` for the RAG tools (`search_knowledge`, `read_knowledge_doc`), so the dev server needs `BLOB_READ_WRITE_TOKEN` for those to work.
 - Debug with `npx eve info` (discovery/diagnostics) and `npx eve invoke -u http://localhost:3000 "<prompt>"` (end-to-end turn without the UI). eve writes gitignored artifacts to `.eve/`.
 
 ### Live data & network egress

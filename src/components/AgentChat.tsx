@@ -7,9 +7,11 @@ import { Markdown } from "./Markdown";
 
 const SUGGESTIONS = [
   "What matters most in my book right now?",
-  "Scan the live signals and flag the top risks.",
-  "What's the news behind today's biggest movers?",
   "Which clients should I call this morning and why?",
+  "What does our concentrated-stock playbook say about Marcus Chen's NVDA position?",
+  "What's our advisory fee on a $5M household?",
+  "Draft a check-in email for Sofia Ramirez that follows our comms policy.",
+  "Which tax-loss harvest swaps does the firm approve for VEA?",
 ];
 
 const PIN_THRESHOLD_PX = 48;
@@ -71,9 +73,16 @@ function MessageParts({
   );
 }
 
-export function InsightsAgent() {
+export function AgentChat({
+  clients,
+  initialClientId,
+}: {
+  clients: { id: string; name: string }[];
+  initialClientId?: string;
+}) {
   const agent = useEveAgent();
   const [input, setInput] = useState("");
+  const [clientId, setClientId] = useState(initialClientId ?? "");
   const scrollRef = useRef<HTMLDivElement>(null);
   const pinnedRef = useRef(true);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -98,11 +107,40 @@ export function InsightsAgent() {
     if (!message || busy) return;
     setInput("");
     pinnedRef.current = true;
-    void agent.send({ message });
+    const focus = clients.find((c) => c.id === clientId);
+    void agent.send({
+      message,
+      // Ephemeral per-turn context: rides along with the message, is never
+      // shown in the transcript and never persisted to session history.
+      ...(focus
+        ? {
+            clientContext: `The RM currently has ${focus.name} (client id: ${focus.id}) focused in the UI. When the question refers to "this client" or is ambiguous, it is about ${focus.name} — use get_client_details with id "${focus.id}".`,
+          }
+        : {}),
+    });
   }
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <label htmlFor="focus-client" className="text-xs text-muted">
+          Context
+        </label>
+        <select
+          id="focus-client"
+          value={clientId}
+          onChange={(e) => setClientId(e.target.value)}
+          className="rounded-lg border border-edge bg-surface-2 px-3 py-1.5 text-sm outline-none transition-colors focus:border-accent"
+        >
+          <option value="">Entire book of business</option>
+          {clients.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div
         ref={scrollRef}
         onScroll={handleScroll}
@@ -111,11 +149,11 @@ export function InsightsAgent() {
         {messages.length === 0 && (
           <div className="flex h-full flex-col items-center justify-center gap-4 py-10 text-center">
             <p className="text-sm text-muted">
-              A durable eve agent with live tools: market snapshot, derived
-              signals, headlines and your book. Ask for an insight and watch
-              it gather the data.
+              One durable agent for everything: live market data and signals,
+              your book of business, and the firm&apos;s knowledge base —
+              policies, playbooks, fees and meeting records.
             </p>
-            <div className="flex max-w-lg flex-wrap justify-center gap-2">
+            <div className="flex max-w-xl flex-wrap justify-center gap-2">
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s}
@@ -131,8 +169,7 @@ export function InsightsAgent() {
         )}
         {messages.map((message, i) => {
           const isLast = i === messages.length - 1;
-          const streaming =
-            busy && isLast && message.role === "assistant";
+          const streaming = busy && isLast && message.role === "assistant";
           return (
             <div
               key={message.id}
@@ -195,7 +232,7 @@ export function InsightsAgent() {
           ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask for a live insight…"
+          placeholder="Ask about the market, your book, or firm policy…"
           className="flex-1 rounded-xl border border-edge bg-surface-2 px-4 py-2.5 text-sm outline-none transition-colors placeholder:text-muted focus:border-accent"
         />
         {messages.length > 0 && !busy && (
@@ -207,13 +244,23 @@ export function InsightsAgent() {
             New session
           </button>
         )}
-        <button
-          type="submit"
-          disabled={busy || !input.trim()}
-          className="rounded-xl bg-accent px-5 py-2.5 text-sm font-medium text-black transition-all duration-150 hover:brightness-110 active:scale-[0.97] disabled:opacity-40"
-        >
-          {busy ? "…" : "Send"}
-        </button>
+        {busy ? (
+          <button
+            type="button"
+            onClick={() => agent.stop()}
+            className="rounded-xl border border-edge bg-surface-2 px-5 py-2.5 text-sm font-medium transition-colors hover:border-negative/60 hover:text-negative"
+          >
+            Stop
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={!input.trim()}
+            className="rounded-xl bg-accent px-5 py-2.5 text-sm font-medium text-black transition-all duration-150 hover:brightness-110 active:scale-[0.97] disabled:opacity-40"
+          >
+            Send
+          </button>
+        )}
       </form>
     </div>
   );
