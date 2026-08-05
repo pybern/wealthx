@@ -6,10 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:blob": "node scripts/seed-blob.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.22",
+    "@vercel/blob": "^2.6.1",
     "ai": "^7.0.51",
     "dompurify": "^3.4.12",
     "eve": "^0.29.5",

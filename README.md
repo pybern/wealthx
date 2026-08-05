@@ -25,6 +25,18 @@ A wealth-management intelligence platform built for **relationship managers (RMs
 
 If a source is unreachable, quotes degrade to a baked-in last-known baseline and are labeled `fallback` — the app never breaks offline.
 
+### RAG knowledge corpus (Vercel Blob)
+
+`data/rag-corpus/` holds a simulated internal knowledge base — firm policies (CIO outlook, fee schedule, approved product shelf), compliance manuals, advisor playbooks (concentrated stock, tax-loss harvesting, RMD/QCD, cash deployment), a fixed-income desk note, and meeting/call records for several client households. The documents cross-reference the simulated clients and real products, so retrieval-augmented answers can cite them.
+
+Seed the corpus into a **private Vercel Blob store**:
+
+```bash
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_... npm run seed:blob
+```
+
+The script uploads every document under the `rag/` prefix with stable pathnames (idempotent — safe to re-run) plus a `rag/manifest.json` index. Because the store is private, read documents back server-side with `get(pathname, { access: "private" })` or `list()` from `@vercel/blob` — blob URLs are not publicly fetchable.
+
 ## Getting started
 
 ```bash

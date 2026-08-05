@@ -20,6 +20,11 @@ WealthLens is a **single-service Next.js 16 app** (App Router, server components
 - Pages fetch **live, keyless** market data on the server (Yahoo Finance for stocks/ETFs/indices, CoinGecko for BTC/ETH, Frankfurter/ECB for FX) and auto-refresh ~every 60s. Egress to these hosts works in the cloud VM.
 - If a source is unreachable, quotes degrade to a baked-in baseline labeled `fallback` (`src/lib/market/fallback.ts`) — the app never hard-fails offline, so a `fallback` label is expected behavior, not a bug.
 
+### Vercel Blob store — RAG knowledge corpus
+- `BLOB_READ_WRITE_TOKEN` and `BLOB_STORE_ID` are environment secrets for a **private** Vercel Blob store holding the RAG knowledge corpus (firm policies, playbooks, meeting notes under `data/rag-corpus/`).
+- Seed/re-seed with `npm run seed:blob` — idempotent: uploads `data/rag-corpus/**/*.md` to the `rag/` prefix with stable pathnames plus a `rag/manifest.json` index.
+- The store is private, so `put()`/`get()` must pass `access: "private"`; blob URLs are not publicly fetchable — read server-side via `@vercel/blob` (`get`, `list`) with the token.
+
 ### AI copilot (Open Code Zen) — important gotcha
 - The AI copilot / workbench (`/assistant`, `src/app/api/ai/{chat,generate}`) calls the OpenAI-compatible Open Code Zen gateway and requires `OPENCODE_ZEN_API_KEY` (provided as an environment secret).
 - **The source default model `big-pickle` (`src/lib/ai/zen.ts`) is no longer in the Zen catalog and returns HTTP 500 / hangs.** Set a current model via the `OPENCODE_ZEN_MODEL` env var instead of editing source. This repo keeps it in a gitignored `.env.local` (e.g. `OPENCODE_ZEN_MODEL=claude-haiku-4-5`). `.env.local` is NOT committed, so recreate it if it is missing.
